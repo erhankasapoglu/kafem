@@ -1,0 +1,59 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Region {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  name   String
+  tables Table[]
+
+  @@unique([name])
+}
+
+model Table {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  tableId  Int
+  regionId String
+  region   Region @relation(fields: [regionId], references: [id])
+  sessions TableSession[] @relation("TableSessions")
+
+  // Aynı region'da aynı tableId bir daha eklenemesin
+  @@unique([regionId, tableId])
+}
+
+model TableSession {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  // tableId opsiyonel (String?), tablo silinirse null olabilir
+  tableId        String?
+  status         String
+  total          Float
+  paymentMethod  String?
+  closedAt       DateTime?
+
+  items          TableSessionItem[] @relation("TableSessionItems")
+  // table da opsiyonel (Table?), onDelete: SetNull
+  table          Table? @relation("TableSessions", fields: [tableId], references: [id], onDelete: SetNull)
+}
+
+model TableSessionItem {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  tableSessionId String
+  name           String
+  price          Float
+  quantity       Int
+  createdAt      DateTime @default(now())
+
+  tableSession   TableSession @relation("TableSessionItems", fields: [tableSessionId], references: [id])
+  @@unique([tableSessionId, name], map: "tableSessionId_name")
+}
+
+model Product {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  name  String
+  price Float
+}
